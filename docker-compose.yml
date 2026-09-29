@@ -1,0 +1,83 @@
+# ─────────────────────────────────────────────────────────────
+# Jewellery ERP — Docker Compose (Local Development)
+# ─────────────────────────────────────────────────────────────
+# Usage:
+#   docker-compose up          → Start all services
+#   docker-compose up backend  → Start backend only
+#   docker-compose down        → Stop and remove containers
+#
+# NOTE: This file is for LOCAL DEVELOPMENT only.
+# In production, the database is Supabase PostgreSQL (not this container).
+
+version: "3.9"
+
+services:
+  # ── FastAPI Backend ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jewellery_erp_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/jewellery_erp
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL}
+      - CORS_ORIGINS=http://localhost:3000
+      - DEBUG=true
+    volumes:
+      # Mount source code for hot-reload during development
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  # ── Next.js Frontend ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jewellery_erp_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    command: npm run dev
+    restart: unless-stopped
+
+  # ── Local PostgreSQL (for development without Supabase) ───
+  # Comment this out if you prefer to always use Supabase directly
+  db:
+    image: postgres:16-alpine
+    container_name: jewellery_erp_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: jewellery_erp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local

@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+.env.*
+!.env.example
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+test.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Alembic
+# Keep migrations/versions tracked
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
